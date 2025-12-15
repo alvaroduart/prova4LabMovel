@@ -1,0 +1,202 @@
+import React, { useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Dimensions, 
+  StatusBar, 
+  TouchableOpacity 
+} from 'react-native';
+import MapView, { Marker, Polyline, Polygon, Circle } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons';
+
+export default function MapScreen() {
+  const mapRef = useRef<MapView>(null);
+
+  // Coordenadas
+  const origin = { latitude: -21.5550, longitude: -45.4150 };
+  const destination = { latitude: -21.5494, longitude: -45.4191 };
+
+  // Polígono (Pentágono) na CHEGADA
+  const areaCoords = [
+    { latitude: destination.latitude + 0.0025, longitude: destination.longitude },
+    { latitude: destination.latitude + 0.0005, longitude: destination.longitude + 0.0025 },
+    { latitude: destination.latitude - 0.0020, longitude: destination.longitude + 0.0015 },
+    { latitude: destination.latitude - 0.0020, longitude: destination.longitude - 0.0015 },
+    { latitude: destination.latitude + 0.0005, longitude: destination.longitude - 0.0025 },
+  ];
+
+  const focusOnOrigin = () => {
+    mapRef.current?.animateToRegion({
+      ...origin,
+      latitudeDelta: 0.015,
+      longitudeDelta: 0.015,
+    }, 1000);
+  };
+
+  const focusOnDestination = () => {
+    mapRef.current?.animateToRegion({
+      ...destination,
+      latitudeDelta: 0.015,
+      longitudeDelta: 0.015,
+    }, 1000);
+  };
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Rota Dinâmica</Text>
+        <Text style={styles.subTitle}>Sua localização {'->'} Destino</Text>
+      </View>
+
+      <MapView
+        ref={mapRef}
+        style={styles.map}
+        initialRegion={{
+          latitude: origin.latitude,
+          longitude: origin.longitude,
+          latitudeDelta: 0.015,
+          longitudeDelta: 0.015,
+        }}
+        // Mantemos showsUserLocation se quiser a bolinha real do GPS também
+        showsUserLocation={true} 
+        toolbarEnabled={false}
+        loadingEnabled={false}
+      >
+        {/* Raio no Ponto de PARTIDA */}
+        <Circle
+          center={origin}
+          radius={100} 
+          fillColor="rgba(79, 70, 229, 0.2)"
+          strokeColor="transparent"
+        />
+
+        {/* --- NOVO: MARCADOR PERSONALIZADO (BOLINHA AZUL) NA ORIGEM --- */}
+        {/* anchor={{x: 0.5, y: 0.5}} garante que o centro da bolinha seja a coordenada exata */}
+        <Marker coordinate={origin} anchor={{x: 0.5, y: 0.5}}>
+          <View style={styles.myLocationMarker}>
+            <View style={styles.myLocationDot} />
+          </View>
+        </Marker>
+
+        {/* Marcador no DESTINO (Pino Vermelho Padrão) */}
+        <Marker coordinate={destination} title="Destino" pinColor="red" />
+
+        {/* Rota */}
+        <Polyline 
+          coordinates={[origin, destination]} 
+          strokeColor="#4F46E5"
+          strokeWidth={4} 
+        />
+
+        {/* Polígono na CHEGADA */}
+        <Polygon 
+          coordinates={areaCoords}
+          fillColor="rgba(34, 197, 94, 0.2)"
+          strokeColor="transparent"
+        />
+      </MapView>
+
+      {/* Botões Flutuantes */}
+      <View style={styles.fabContainer}>
+        <TouchableOpacity style={styles.fabButton} onPress={focusOnOrigin}>
+          <Ionicons name="location" size={24} color="#E11D48" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.fabButton} onPress={focusOnDestination}>
+          <Ionicons name="flag" size={24} color="#374151" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Legenda */}
+      <View style={styles.legendContainer}>
+        <View style={styles.legendItem}>
+          <View style={[styles.colorBox, { backgroundColor: '#4F46E5' }]} />
+          <Text style={styles.legendText}> Rota até o Destino</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.colorBox, { backgroundColor: 'rgba(34, 197, 94, 0.5)' }]} />
+          <Text style={styles.legendText}> Área de Chegada</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fff' },
+  header: { 
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 20 : 50, 
+    paddingBottom: 15, 
+    paddingHorizontal: 20, 
+    backgroundColor: '#fff', 
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    elevation: 5
+  },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#333' },
+  subTitle: { fontSize: 14, color: '#666', marginTop: 2 },
+  map: { flex: 1, width: Dimensions.get('window').width },
+  
+  // Estilo da "Bolinha Azul" personalizada
+  myLocationMarker: {
+    width: 24,
+    height: 24,
+    borderRadius: 12, // Metade da largura para ser redondo
+    backgroundColor: '#fff', // Borda branca
+    justifyContent: 'center',
+    alignItems: 'center',
+    // Sombra para destacar do mapa
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  myLocationDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#4F46E5', // Azul da aplicação
+  },
+
+  // Botões Flutuantes
+  fabContainer: {
+    position: 'absolute',
+    bottom: 140, 
+    right: 20,
+    gap: 12, 
+    alignItems: 'center',
+  },
+  fabButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    shadowOffset: { width: 0, height: 2 },
+  },
+
+  legendContainer: {
+    position: 'absolute',
+    bottom: 40,
+    left: 20,
+    right: 20,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  legendItem: { flexDirection: 'row', alignItems: 'center', marginRight: 10, marginBottom: 10 },
+  colorBox: { width: 16, height: 16, borderRadius: 4 },
+  legendText: { fontSize: 14, color: '#444', fontWeight: '500' }
+});
